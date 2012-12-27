@@ -21,7 +21,8 @@ git --no-pager diff --exit-code --quiet --cached || die "commit or stash your ca
 echo "Pulling most recent keys."
 git pull
 
-while read host; do
+while read -r host; do
+  [[ "$host" =~ ^# ]] && continue
   echo "Updating $host"
   cat authorized_keys | ssh "$host" "
     # if known_hosts exists then you are enabling bounce attacks. Stop SSHing out.
