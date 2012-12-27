@@ -28,3 +28,10 @@ Delete the key from authorized_keys, then commit and run `./deploy`.
 ### To set up a new server
 
 run `./setup username@mynewhost.example.com`
+
+
+## License
+
+Pain-free MIT: http://en.wikipedia.org/wiki/MIT_License
+
+Upstream Project: https://github.com/bronson/sshkeys
