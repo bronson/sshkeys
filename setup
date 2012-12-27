@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# This script sets up public key authentication on the named host.
+# Run it like this:
+#
+#     ./setup deploy@host
+#
+# You will be prompted once for the user's password.  After that
+# you can use public key authentication for everything.
+
+set -e
+host="$1"
+
+die() {
+  echo "$@"
+  exit 1
+}
+
+# Ensure all changes are committed and pushed before continuing
+git --no-pager diff --exit-code --quiet || die "commit or stash your changes"
+git --no-pager diff --exit-code --quiet --cached || die "commit or stash your cached changes"
+[ -z "`git rev-list @{upstream}.. -n 1`" ] || die "push your changes"
+
+echo "pulling most recent keys"
+git pull
+
+echo "setting up $host"
+cat authorized_keys | ssh "$host" "
+  # if known_hosts exists then you are enabling bounce attacks. Stop SSHing out.
+  [ -f ~/.ssh/known_hosts ] && echo 'WARNING: someone has been sshing out.'
+  [ -e ~/.ssh ] && echo 'ERROR: ~/.ssh already exists on $host. Please remove it.' && exit 1
+  chmod go-w ~
+  mkdir -p ~/.ssh
+  chmod go-rwx ~/.ssh
+  cat > ~/.ssh/authorized_keys
+  chmod go-rwx ~/.ssh/authorized_keys
+  "
+
+echo "adding $host to SERVERS list"
+echo "$host" >> SERVERS
+# sort and uniq the SERVERS file in-place
+( rm SERVERS; sort | uniq > SERVERS ) < SERVERS
+
+echo "pushing changes"
+git commit SERVERS -m "set up $host"
+git push
+
+echo "public key login is enabled on $host and changes pushed."

@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# This script copies the latest authorized_keys file to all hosts
+# named in the SERVERS file.
+#
+#     ./deploy
+#
+
+set -e
+
+die() {
+  echo "$@"
+  exit 1
+}
+
+# Ensure all changes are committed and pushed before continuing
+git --no-pager diff --exit-code --quiet || die "commit or stash your changes"
+git --no-pager diff --exit-code --quiet --cached || die "commit or stash your cached changes"
+[ -z "`git rev-list @{upstream}.. -n 1`" ] || die "push your changes"
+
+echo "Pulling most recent keys."
+git pull
+
+while read host; do
+  echo "Updating $host"
+  cat authorized_keys | ssh "$host" "
+    # if known_hosts exists then you are enabling bounce attacks. Stop SSHing out.
+    [ -f ~/.ssh/known_hosts ] && echo 'WARNING: someone has been sshing out on $host.'
+    cat > ~/.ssh/authorized_keys
+    chmod go-rwx ~/.ssh/authorized_keys
+    "
+done < SERVERS
+echo "Done."
